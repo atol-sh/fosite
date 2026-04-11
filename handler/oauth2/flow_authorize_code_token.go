@@ -164,7 +164,11 @@ func (c *AuthorizeExplicitGrantHandler) PopulateTokenEndpointResponse(ctx contex
 		}
 	}()
 
-	if err = c.CoreStorage.InvalidateAuthorizeCodeSession(ctx, signature); err != nil {
+	if err = c.CoreStorage.InvalidateAuthorizeCodeSession(ctx, signature); errors.Is(err, fosite.ErrInvalidatedAuthorizeCode) {
+		// Another concurrent request already exchanged this code. Per RFC 6749
+		// Section 4.1.2, deny the duplicate exchange.
+		return errorsx.WithStack(fosite.ErrInvalidGrant.WithHint("The authorization code has already been used."))
+	} else if err != nil {
 		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
 	} else if err = c.CoreStorage.CreateAccessTokenSession(ctx, accessSignature, requester.Sanitize([]string{})); err != nil {
 		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))

@@ -277,6 +277,9 @@ func (s *MemoryStore) InvalidateAuthorizeCodeSession(ctx context.Context, code s
 	if !ok {
 		return fosite.ErrNotFound
 	}
+	if !rel.active {
+		return fosite.ErrInvalidatedAuthorizeCode
+	}
 	rel.active = false
 	s.AuthorizeCodes[code] = rel
 	return nil
