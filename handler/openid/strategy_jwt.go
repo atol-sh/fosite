@@ -84,6 +84,10 @@ func (s *DefaultSession) GetUsername() string {
 
 func (s *DefaultSession) SetSubject(subject string) {
 	s.Subject = subject
+	if s.Claims == nil {
+		s.Claims = &jwt.IDTokenClaims{}
+	}
+	s.Claims.Subject = subject
 }
 
 func (s *DefaultSession) GetSubject() string {
