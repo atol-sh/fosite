@@ -26,6 +26,13 @@ func (f *Fosite) WriteAuthorizeResponse(ctx context.Context, rw http.ResponseWri
 		rw.Header().Add("Content-Type", "text/html;charset=UTF-8")
 		WriteAuthorizeFormPostResponse(redir.String(), resp.GetParameters(), GetPostFormHTMLTemplate(ctx, f), rw)
 		return
+	case ResponseModeWebMessage:
+		// web_message response mode delivers the authorization response via
+		// window.postMessage to the parent frame or opener window. See
+		// draft-sakimura-oauth-wmrm-01.
+		rw.Header().Set("Content-Type", "text/html;charset=UTF-8")
+		WriteAuthorizeWebMessageResponse(redir.String(), resp.GetParameters(), GetWebMessageHTMLTemplate(ctx, f), rw)
+		return
 	case ResponseModeQuery, ResponseModeDefault:
 		// Explicit grants
 		q := redir.Query()

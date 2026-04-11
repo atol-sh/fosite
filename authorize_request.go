@@ -10,10 +10,11 @@ import (
 type ResponseModeType string
 
 const (
-	ResponseModeDefault  = ResponseModeType("")
-	ResponseModeFormPost = ResponseModeType("form_post")
-	ResponseModeQuery    = ResponseModeType("query")
-	ResponseModeFragment = ResponseModeType("fragment")
+	ResponseModeDefault    = ResponseModeType("")
+	ResponseModeFormPost   = ResponseModeType("form_post")
+	ResponseModeQuery      = ResponseModeType("query")
+	ResponseModeFragment   = ResponseModeType("fragment")
+	ResponseModeWebMessage = ResponseModeType("web_message")
 )
 
 // AuthorizeRequest is an implementation of AuthorizeRequester

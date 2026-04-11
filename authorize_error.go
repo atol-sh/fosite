@@ -52,6 +52,12 @@ func (f *Fosite) WriteAuthorizeError(ctx context.Context, rw http.ResponseWriter
 		rw.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		WriteAuthorizeFormPostResponse(redirectURI.String(), errors, GetPostFormHTMLTemplate(ctx, f), rw)
 		return
+	} else if ar.GetResponseMode() == ResponseModeWebMessage {
+		// web_message error: post the error payload back to the parent/opener
+		// frame the same way successful responses are delivered.
+		rw.Header().Set("Content-Type", "text/html;charset=UTF-8")
+		WriteAuthorizeWebMessageResponse(redirectURI.String(), errors, GetWebMessageHTMLTemplate(ctx, f), rw)
+		return
 	} else if ar.GetResponseMode() == ResponseModeFragment {
 		redirectURIString = redirectURI.String() + "#" + errors.Encode()
 	} else {

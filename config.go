@@ -263,6 +263,13 @@ type FormPostHTMLTemplateProvider interface {
 	GetFormPostHTMLTemplate(ctx context.Context) *template.Template
 }
 
+// WebMessageHTMLTemplateProvider returns the provider for configuring the
+// web_message response mode HTML template (draft-sakimura-oauth-wmrm-01).
+type WebMessageHTMLTemplateProvider interface {
+	// GetWebMessageHTMLTemplate returns the web_message HTML template.
+	GetWebMessageHTMLTemplate(ctx context.Context) *template.Template
+}
+
 type TokenURLProvider interface {
 	// GetTokenURLs returns the token URL.
 	GetTokenURLs(ctx context.Context) []string

@@ -6,10 +6,13 @@ package fosite_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	gomock "go.uber.org/mock/gomock"
 
 	. "github.com/ory/fosite"
@@ -209,5 +212,147 @@ func TestWriteAuthorizeResponse(t *testing.T) {
 		c.expect()
 		header = http.Header{}
 		t.Logf("Passed test case %d", k)
+	}
+}
+
+// TestWriteAuthorizeResponse_WebMessage verifies the web_message response
+// mode renders an HTML document that posts the authorization response via
+// window.postMessage, targeted at the redirect_uri origin. See
+// draft-sakimura-oauth-wmrm-01.
+func TestWriteAuthorizeResponse_WebMessage(t *testing.T) {
+	oauth2 := &Fosite{Config: new(Config)}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	for _, tc := range []struct {
+		name         string
+		redirectURI  string
+		params       url.Values
+		wantOrigin   string
+		wantPostCall bool
+		wantContains []string
+	}{
+		{
+			name:        "success response is posted to redirect_uri origin",
+			redirectURI: "https://client.example.com/callback",
+			params: url.Values{
+				"code":  {"auth-code-xyz"},
+				"state": {"s123"},
+			},
+			wantOrigin:   "https://client.example.com",
+			wantPostCall: true,
+			wantContains: []string{
+				`"code":"auth-code-xyz"`,
+				`"state":"s123"`,
+				`"https://client.example.com"`,
+				`"authorization_response"`,
+				`opener.postMessage`,
+			},
+		},
+		{
+			name:        "localhost redirect preserves port in origin",
+			redirectURI: "http://localhost:3005/callback",
+			params: url.Values{
+				"code": {"c"},
+			},
+			wantOrigin:   "http://localhost:3005",
+			wantPostCall: true,
+			wantContains: []string{
+				`"http://localhost:3005"`,
+			},
+		},
+		{
+			name:        "path and query in redirect_uri are stripped from origin",
+			redirectURI: "https://app.example.com/oidc/callback?nested=1",
+			params: url.Values{
+				"code": {"c"},
+			},
+			wantOrigin:   "https://app.example.com",
+			wantPostCall: true,
+			wantContains: []string{
+				`"https://app.example.com"`,
+			},
+		},
+		{
+			name:        "empty origin guards against postMessage",
+			redirectURI: "not-a-valid-uri",
+			params: url.Values{
+				"code": {"c"},
+			},
+			wantOrigin:   "",
+			wantPostCall: false,
+			wantContains: []string{
+				`if (!origin) { return; }`,
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ar := NewMockAuthorizeRequester(ctrl)
+			resp := NewMockAuthorizeResponder(ctrl)
+
+			redir, _ := url.Parse(tc.redirectURI)
+			ar.EXPECT().GetRedirectURI().Return(redir)
+			ar.EXPECT().GetResponseMode().Return(ResponseModeWebMessage)
+			resp.EXPECT().GetHeader().Return(http.Header{})
+			resp.EXPECT().GetParameters().Return(tc.params)
+
+			rec := httptest.NewRecorder()
+			oauth2.WriteAuthorizeResponse(context.Background(), rec, ar, resp)
+
+			assert.Equal(t, "text/html;charset=UTF-8", rec.Header().Get("Content-Type"))
+			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+			assert.Equal(t, "no-cache", rec.Header().Get("Pragma"))
+
+			body := rec.Body.String()
+			for _, needle := range tc.wantContains {
+				assert.Contains(t, body, needle, "rendered body missing %q", needle)
+			}
+
+			// Spec sanity: every successful render must declare the response
+			// map and reference postMessage. The empty-origin guard is checked
+			// via wantContains above for that specific case.
+			assert.Contains(t, body, "var response =")
+			assert.Contains(t, body, "opener.postMessage")
+
+			// The postMessage targetOrigin literal must appear with surrounding
+			// quotes so the JS parses it as a string; an empty origin must not
+			// produce `""` as a targetOrigin argument to postMessage.
+			if tc.wantPostCall {
+				assert.Contains(t, body, ", origin)")
+			}
+			if !tc.wantPostCall {
+				assert.NotContains(t, body, `, "")`)
+			}
+		})
+	}
+}
+
+// TestExtractRedirectOrigin pins extractRedirectOrigin's behavior for the
+// range of redirect URIs fosite callers are allowed to send. It is exposed
+// indirectly via the template, so we verify through the template output.
+func TestExtractRedirectOriginThroughTemplate(t *testing.T) {
+	for _, tc := range []struct {
+		redirect   string
+		wantOrigin string
+	}{
+		{"https://client.example.com/callback", "https://client.example.com"},
+		{"https://client.example.com:8443/callback", "https://client.example.com:8443"},
+		{"http://localhost:3005/callback", "http://localhost:3005"},
+		{"custom-scheme://app/callback", "custom-scheme://app"},
+		{"", ""},
+		{"no-host", ""},
+		{"://bad", ""},
+	} {
+		t.Run(tc.redirect, func(t *testing.T) {
+			var buf strings.Builder
+			WriteAuthorizeWebMessageResponse(tc.redirect, url.Values{"code": {"c"}}, DefaultWebMessageTemplate, &buf)
+			body := buf.String()
+			require.Contains(t, body, "var origin =")
+			if tc.wantOrigin == "" {
+				assert.Contains(t, body, `var origin = "";`)
+			} else {
+				assert.Contains(t, body, `"`+tc.wantOrigin+`"`)
+			}
+		})
 	}
 }

@@ -32,6 +32,29 @@ var DefaultFormPostTemplate = template.Must(template.New("form_post").Parse(`<ht
    </body>
 </html>`))
 
+// DefaultWebMessageTemplate renders the authorization response using the
+// OAuth 2.0 Web Message Response Mode (draft-sakimura-oauth-wmrm-01). The
+// response parameters are posted via postMessage to the parent window
+// (silent renewal iframe) or opener window (popup), with the redirect URI's
+// origin used as the targetOrigin so the parent can validate the source.
+var DefaultWebMessageTemplate = template.Must(template.New("web_message").Parse(`<!DOCTYPE html>
+<html>
+  <head><title>Authorization Response</title></head>
+  <body>
+    <script>
+      (function() {
+        var opener = window.opener || (window.parent !== window ? window.parent : null);
+        if (!opener) { return; }
+        var origin = {{.TargetOrigin}};
+        if (!origin) { return; }
+        var response = {{.Response}};
+        opener.postMessage({ type: "authorization_response", response: response }, origin);
+        if (window.opener) { window.close(); }
+      })();
+    </script>
+  </body>
+</html>`))
+
 // MatchRedirectURIWithClientRedirectURIs if the given uri is a registered redirect uri. Does not perform
 // uri validation.
 //
@@ -214,4 +237,44 @@ func GetPostFormHTMLTemplate(ctx context.Context, f *Fosite) *template.Template 
 		return t
 	}
 	return DefaultFormPostTemplate
+}
+
+// WriteAuthorizeWebMessageResponse renders the Web Message Response Mode
+// HTML that uses window.postMessage to deliver the authorization response to
+// the parent frame or opener window. The redirect URI's scheme+host is used
+// as the postMessage targetOrigin so callers can verify the source.
+func WriteAuthorizeWebMessageResponse(redirectURL string, parameters url.Values, template *template.Template, rw io.Writer) {
+	response := make(map[string]string, len(parameters))
+	for k := range parameters {
+		response[k] = parameters.Get(k)
+	}
+	_ = template.Execute(rw, struct {
+		RedirURL     string
+		TargetOrigin string
+		Response     map[string]string
+	}{
+		RedirURL:     redirectURL,
+		TargetOrigin: extractRedirectOrigin(redirectURL),
+		Response:     response,
+	})
+}
+
+// extractRedirectOrigin returns the scheme://host of the redirect URI, used
+// as the postMessage targetOrigin. An empty string is returned if parsing
+// fails; callers should avoid invoking postMessage with an empty origin.
+func extractRedirectOrigin(redirectURL string) string {
+	u, err := url.Parse(redirectURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+// GetWebMessageHTMLTemplate returns the configured Web Message Response Mode
+// template or falls back to DefaultWebMessageTemplate.
+func GetWebMessageHTMLTemplate(ctx context.Context, f *Fosite) *template.Template {
+	if t := f.Config.GetWebMessageHTMLTemplate(ctx); t != nil {
+		return t
+	}
+	return DefaultWebMessageTemplate
 }

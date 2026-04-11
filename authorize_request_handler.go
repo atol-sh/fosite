@@ -240,6 +240,8 @@ func (f *Fosite) ParseResponseMode(ctx context.Context, r *http.Request, request
 		request.ResponseMode = ResponseModeQuery
 	case string(ResponseModeFormPost):
 		request.ResponseMode = ResponseModeFormPost
+	case string(ResponseModeWebMessage):
+		request.ResponseMode = ResponseModeWebMessage
 	default:
 		rm := ResponseModeType(responseMode)
 		if f.ResponseModeHandler(ctx).ResponseModes().Has(rm) {
