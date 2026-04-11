@@ -232,6 +232,15 @@ func (h DefaultStrategy) GenerateIDToken(ctx context.Context, lifespan time.Dura
 	claims.Audience = stringslice.Unique(append(claims.Audience, requester.GetClient().GetID()))
 	claims.IssuedAt = time.Now().UTC()
 
+	// Per-client signing algorithm: if the client specifies a preferred
+	// signing algorithm, set it in the ID token headers so that both the
+	// signer and hash computation (ComputeHash) use the correct algorithm.
+	if algClient, ok := requester.GetClient().(fosite.IDTokenSigningAlgClient); ok {
+		if alg := algClient.GetIDTokenSigningAlg(); alg != "" {
+			sess.IDTokenHeaders().Add("alg", alg)
+		}
+	}
+
 	token, _, err = h.Signer.Generate(ctx, claims.ToMapClaims(), sess.IDTokenHeaders())
 	return token, err
 }

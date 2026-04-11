@@ -98,6 +98,7 @@ type DefaultOpenIDConnectClient struct {
 	RequestURIs                       []string            `json:"request_uris"`
 	RequestObjectSigningAlgorithm     string              `json:"request_object_signing_alg"`
 	TokenEndpointAuthSigningAlgorithm string              `json:"token_endpoint_auth_signing_alg"`
+	IDTokenSigningAlgorithm           string              `json:"id_token_signed_response_alg"`
 }
 
 type DefaultResponseModeClient struct {
@@ -187,4 +188,10 @@ func (c *DefaultOpenIDConnectClient) GetRequestURIs() []string {
 
 func (c *DefaultResponseModeClient) GetResponseModes() []ResponseModeType {
 	return c.ResponseModes
+}
+
+// GetIDTokenSigningAlg returns the preferred ID token signing algorithm for
+// this client. An empty string means "use server default".
+func (c *DefaultOpenIDConnectClient) GetIDTokenSigningAlg() string {
+	return c.IDTokenSigningAlgorithm
 }
