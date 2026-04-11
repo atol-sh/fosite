@@ -15,6 +15,7 @@ package internal
 import (
 	context "context"
 	reflect "reflect"
+	"time"
 
 	fosite "github.com/ory/fosite"
 	gomock "go.uber.org/mock/gomock"
@@ -159,15 +160,15 @@ func (mr *MockTokenRevocationStorageMockRecorder) RevokeRefreshToken(ctx, reques
 }
 
 // RotateRefreshToken mocks base method.
-func (m *MockTokenRevocationStorage) RotateRefreshToken(ctx context.Context, requestID, refreshTokenSignature string) error {
+func (m *MockTokenRevocationStorage) RotateRefreshToken(ctx context.Context, requestID, refreshTokenSignature string, nextExpiry time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RotateRefreshToken", ctx, requestID, refreshTokenSignature)
+	ret := m.ctrl.Call(m, "RotateRefreshToken", ctx, requestID, refreshTokenSignature, nextExpiry)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RotateRefreshToken indicates an expected call of RotateRefreshToken.
-func (mr *MockTokenRevocationStorageMockRecorder) RotateRefreshToken(ctx, requestID, refreshTokenSignature any) *gomock.Call {
+func (mr *MockTokenRevocationStorageMockRecorder) RotateRefreshToken(ctx, requestID, refreshTokenSignature, nextExpiry any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateRefreshToken", reflect.TypeOf((*MockTokenRevocationStorage)(nil).RotateRefreshToken), ctx, requestID, refreshTokenSignature)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateRefreshToken", reflect.TypeOf((*MockTokenRevocationStorage)(nil).RotateRefreshToken), ctx, requestID, refreshTokenSignature, nextExpiry)
 }
