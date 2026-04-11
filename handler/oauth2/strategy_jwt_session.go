@@ -72,6 +72,10 @@ func (j *JWTSession) GetUsername() string {
 
 func (j *JWTSession) SetSubject(subject string) {
 	j.Subject = subject
+	if j.JWTClaims == nil {
+		j.JWTClaims = &jwt.JWTClaims{}
+	}
+	j.JWTClaims.Subject = subject
 }
 
 func (j *JWTSession) GetSubject() string {
