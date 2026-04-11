@@ -55,6 +55,7 @@ var (
 	_ ResponseModeHandlerExtensionProvider         = (*Config)(nil)
 	_ MessageCatalogProvider                       = (*Config)(nil)
 	_ FormPostHTMLTemplateProvider                 = (*Config)(nil)
+	_ WebMessageHTMLTemplateProvider               = (*Config)(nil)
 	_ TokenURLProvider                             = (*Config)(nil)
 	_ GetSecretsHashingProvider                    = (*Config)(nil)
 	_ HTTPClientProvider                           = (*Config)(nil)
@@ -176,6 +177,9 @@ type Config struct {
 
 	// FormPostHTMLTemplate sets html template for rendering the authorization response when the request has response_mode=form_post.
 	FormPostHTMLTemplate *template.Template
+
+	// WebMessageHTMLTemplate sets html template for rendering the authorization response when the request has response_mode=web_message.
+	WebMessageHTMLTemplate *template.Template
 
 	// OmitRedirectScopeParam indicates whether the "scope" parameter should be omitted from the redirect URL.
 	OmitRedirectScopeParam bool
@@ -304,6 +308,10 @@ func (c *Config) GetTokenURLs(ctx context.Context) []string {
 
 func (c *Config) GetFormPostHTMLTemplate(ctx context.Context) *template.Template {
 	return c.FormPostHTMLTemplate
+}
+
+func (c *Config) GetWebMessageHTMLTemplate(ctx context.Context) *template.Template {
+	return c.WebMessageHTMLTemplate
 }
 
 func (c *Config) GetMessageCatalog(ctx context.Context) i18n.MessageCatalog {

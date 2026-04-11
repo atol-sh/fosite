@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -446,4 +447,39 @@ func TestWriteAuthorizeError(t *testing.T) {
 func copyUrl(u *url.URL) *url.URL {
 	u2, _ := url.Parse(u.String())
 	return u2
+}
+
+// TestWriteAuthorizeError_WebMessage verifies that when the client requested
+// response_mode=web_message, an authorization error is delivered through the
+// same HTML postMessage channel as a successful response so the opener can
+// observe failures without blocking on a missing redirect.
+func TestWriteAuthorizeError_WebMessage(t *testing.T) {
+	redir, _ := url.Parse("https://client.example.com/callback")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	req := NewMockAuthorizeRequester(ctrl)
+
+	req.EXPECT().IsRedirectURIValid().Return(true)
+	req.EXPECT().GetRedirectURI().Return(redir)
+	req.EXPECT().GetState().Return("st-1")
+	req.EXPECT().GetResponseTypes().AnyTimes().Return(Arguments([]string{"code"}))
+	req.EXPECT().GetResponseMode().Return(ResponseModeWebMessage).AnyTimes()
+
+	oauth2 := &Fosite{Config: &Config{UseLegacyErrorFormat: true}}
+	rec := httptest.NewRecorder()
+	oauth2.WriteAuthorizeError(context.Background(), rec, req, ErrLoginRequired)
+
+	assert.Equal(t, "text/html;charset=UTF-8", rec.Header().Get("Content-Type"))
+	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+	assert.Equal(t, "no-cache", rec.Header().Get("Pragma"))
+
+	body := rec.Body.String()
+	// The error response is posted back as the response object.
+	assert.Contains(t, body, `"error":"login_required"`)
+	assert.Contains(t, body, `"state":"st-1"`)
+	// postMessage is targeted at the redirect_uri origin.
+	assert.Contains(t, body, `"https://client.example.com"`)
+	// And the outer envelope is "authorization_response".
+	assert.Contains(t, body, `"authorization_response"`)
 }

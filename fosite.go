@@ -140,6 +140,7 @@ type Configurator interface {
 	ResponseModeHandlerExtensionProvider
 	MessageCatalogProvider
 	FormPostHTMLTemplateProvider
+	WebMessageHTMLTemplateProvider
 	TokenURLProvider
 	GetSecretsHashingProvider
 	AuthorizeEndpointHandlersProvider
