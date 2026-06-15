@@ -34,7 +34,7 @@ import (
 // An invalid token type hint value is ignored by the authorization
 // server and does not influence the revocation response.
 func (f *Fosite) NewRevocationRequest(ctx context.Context, r *http.Request) (err error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/ory/fosite").Start(ctx, "Fosite.NewRevocationRequest")
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/atol-sh/fosite").Start(ctx, "Fosite.NewRevocationRequest")
 	defer otelx.End(span, &err)
 
 	ctx = context.WithValue(ctx, RequestContextKey, r)

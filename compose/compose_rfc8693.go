@@ -4,9 +4,9 @@
 package compose
 
 import (
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/handler/rfc8693"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/handler/rfc8693"
 )
 
 // RFC8693TokenExchangeFactory creates an OAuth2 Token Exchange handler (RFC 8693)

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/handler/openid"
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/handler/openid"
+	"github.com/atol-sh/fosite/token/jwt"
 	"github.com/ory/x/errorsx"
 )
 

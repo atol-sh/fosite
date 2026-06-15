@@ -14,7 +14,7 @@ import (
 )
 
 func (f *Fosite) NewAccessResponse(ctx context.Context, requester AccessRequester) (_ AccessResponder, err error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/ory/fosite").Start(ctx, "Fosite.NewAccessResponse")
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/atol-sh/fosite").Start(ctx, "Fosite.NewAccessResponse")
 	defer otelx.End(span, &err)
 
 	var tk TokenEndpointHandler

@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/compose"
-	hst "github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/internal"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/compose"
+	hst "github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/internal"
 )
 
 func TestResourceOwnerPasswordCredentialsFlow(t *testing.T) {

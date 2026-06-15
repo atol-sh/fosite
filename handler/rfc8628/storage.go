@@ -6,8 +6,8 @@ package rfc8628
 import (
 	"context"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/oauth2"
 )
 
 // RFC8628CoreStorage is the storage needed for the DeviceAuthHandler

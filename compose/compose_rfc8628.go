@@ -6,9 +6,9 @@
 package compose
 
 import (
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/handler/rfc8628"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/handler/rfc8628"
 )
 
 // RFC8628DeviceFactory creates an OAuth2 device code grant ("Device Authorization Grant") handler and registers

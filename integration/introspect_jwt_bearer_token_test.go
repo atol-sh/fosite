@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/compose"
-	"github.com/ory/fosite/integration/clients"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/compose"
+	"github.com/atol-sh/fosite/integration/clients"
 )
 
 type introspectJWTBearerTokenSuite struct {

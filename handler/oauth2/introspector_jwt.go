@@ -7,8 +7,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/token/jwt"
 )
 
 type StatelessJWTValidator struct {

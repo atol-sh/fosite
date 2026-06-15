@@ -12,12 +12,12 @@ import (
 	"github.com/ory/x/otelx"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ory/fosite/i18n"
+	"github.com/atol-sh/fosite/i18n"
 )
 
 // NewDeviceRequest parses an http Request returns a Device request
 func (f *Fosite) NewDeviceRequest(ctx context.Context, r *http.Request) (_ DeviceRequester, err error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/ory/fosite").Start(ctx, "Fosite.NewDeviceRequest")
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/atol-sh/fosite").Start(ctx, "Fosite.NewDeviceRequest")
 	defer otelx.End(span, &err)
 
 	request := NewDeviceRequest()

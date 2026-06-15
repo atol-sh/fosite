@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 	"github.com/ory/x/errorsx"
 	"github.com/pkg/errors"
 )

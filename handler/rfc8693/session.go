@@ -6,7 +6,7 @@ package rfc8693
 import (
 	"time"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 // TokenExchangeRequest represents a token exchange request

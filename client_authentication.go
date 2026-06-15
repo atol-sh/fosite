@@ -19,7 +19,7 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/pkg/errors"
 
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite/token/jwt"
 )
 
 // ClientAuthenticationStrategy provides a method signature for authenticating a client request

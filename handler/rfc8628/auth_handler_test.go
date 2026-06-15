@@ -12,11 +12,11 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 
-	"github.com/ory/fosite/internal"
+	"github.com/atol-sh/fosite/internal"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/rfc8628"
-	"github.com/ory/fosite/storage"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/rfc8628"
+	"github.com/atol-sh/fosite/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

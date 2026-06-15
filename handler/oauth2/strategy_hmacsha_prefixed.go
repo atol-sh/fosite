@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	enigma "github.com/ory/fosite/token/hmac"
+	enigma "github.com/atol-sh/fosite/token/hmac"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 var _ CoreStrategy = (*HMACSHAStrategy)(nil)

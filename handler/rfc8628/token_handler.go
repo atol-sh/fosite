@@ -11,11 +11,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/storage"
+	"github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/storage"
 	"github.com/ory/x/errorsx"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 var _ fosite.TokenEndpointHandler = (*DeviceCodeTokenEndpointHandler)(nil)

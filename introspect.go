@@ -39,7 +39,7 @@ func AccessTokenFromRequest(req *http.Request) string {
 }
 
 func (f *Fosite) IntrospectToken(ctx context.Context, token string, tokenUse TokenUse, session Session, scopes ...string) (_ TokenUse, _ AccessRequester, err error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/ory/fosite").Start(ctx, "Fosite.IntrospectToken")
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/atol-sh/fosite").Start(ctx, "Fosite.IntrospectToken")
 	defer otelx.End(span, &err)
 
 	var found = false

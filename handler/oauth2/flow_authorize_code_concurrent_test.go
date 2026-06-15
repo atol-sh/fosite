@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/storage"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

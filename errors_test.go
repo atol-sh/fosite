@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/language"
 
-	"github.com/ory/fosite/i18n"
+	"github.com/atol-sh/fosite/i18n"
 )
 
 func TestRFC6749Error(t *testing.T) {

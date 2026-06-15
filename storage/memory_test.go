@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 func TestMemoryStore_Authenticate(t *testing.T) {

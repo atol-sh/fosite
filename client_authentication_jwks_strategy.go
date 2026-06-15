@@ -16,7 +16,7 @@ import (
 	"github.com/go-jose/go-jose/v3"
 )
 
-const defaultJWKSFetcherStrategyCachePrefix = "github.com/ory/fosite.DefaultJWKSFetcherStrategy:"
+const defaultJWKSFetcherStrategyCachePrefix = "github.com/atol-sh/fosite.DefaultJWKSFetcherStrategy:"
 
 // JWKSFetcherStrategy is a strategy which pulls (optionally caches) JSON Web Key Sets from a location,
 // typically a client's jwks_uri.

@@ -18,17 +18,17 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 
-	"github.com/ory/fosite/internal/gen"
+	"github.com/atol-sh/fosite/internal/gen"
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite/token/jwt"
 
-	. "github.com/ory/fosite"
-	"github.com/ory/fosite/storage"
+	. "github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/storage"
 )
 
 func mustGenerateRSAAssertion(t *testing.T, claims jwt.MapClaims, key *rsa.PrivateKey, kid string) string {

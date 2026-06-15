@@ -3,7 +3,7 @@
 
 package oauth2
 
-import "github.com/ory/fosite"
+import "github.com/atol-sh/fosite"
 
 type LifespanConfigProvider interface {
 	fosite.AccessTokenLifespanProvider

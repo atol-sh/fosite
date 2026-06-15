@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/fosite/internal/gen"
+	"github.com/atol-sh/fosite/internal/gen"
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"

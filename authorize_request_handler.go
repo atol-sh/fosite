@@ -13,8 +13,8 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ory/fosite/i18n"
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite/i18n"
+	"github.com/atol-sh/fosite/token/jwt"
 	"github.com/ory/x/errorsx"
 	"github.com/ory/x/otelx"
 
@@ -326,7 +326,7 @@ func (f *Fosite) authorizeRequestFromPAR(ctx context.Context, r *http.Request, r
 }
 
 func (f *Fosite) NewAuthorizeRequest(ctx context.Context, r *http.Request) (_ AuthorizeRequester, err error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/ory/fosite").Start(ctx, "Fosite.NewAuthorizeRequest")
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("github.com/atol-sh/fosite").Start(ctx, "Fosite.NewAuthorizeRequest")
 	defer otelx.End(span, &err)
 
 	return f.newAuthorizeRequest(ctx, r, false)

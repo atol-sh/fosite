@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 type TokenRevocationHandler struct {

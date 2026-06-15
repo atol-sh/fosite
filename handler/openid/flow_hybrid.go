@@ -9,9 +9,9 @@ import (
 
 	"github.com/ory/x/errorsx"
 
-	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/oauth2"
-	"github.com/ory/fosite/token/jwt"
+	"github.com/atol-sh/fosite"
+	"github.com/atol-sh/fosite/handler/oauth2"
+	"github.com/atol-sh/fosite/token/jwt"
 )
 
 type OpenIDConnectHybridHandler struct {

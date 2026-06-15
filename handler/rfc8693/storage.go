@@ -4,7 +4,7 @@
 package rfc8693
 
 import (
-	"github.com/ory/fosite"
+	"github.com/atol-sh/fosite"
 )
 
 // TokenInfo contains information about a validated token
