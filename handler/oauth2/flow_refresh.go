@@ -51,7 +51,7 @@ func (c *RefreshTokenGrantHandler) HandleTokenEndpointRequest(ctx context.Contex
 		if !ok {
 			return replayCleanupStorageError()
 		}
-		if rErr := c.handleRefreshTokenReuse(ctx, replayStore, signature, originalRequest); rErr != nil {
+		if rErr := c.handleRefreshTokenReuse(ctx, replayStore, originalRequest); rErr != nil {
 			return errorsx.WithStack(rErr)
 		}
 
@@ -157,7 +157,7 @@ func (c *RefreshTokenGrantHandler) PopulateTokenEndpointResponse(ctx context.Con
 		if !ok {
 			return replayCleanupStorageError()
 		}
-		if err = c.revokeRefreshTokenFamily(ctx, replayStore, signature, requester); err != nil {
+		if err = c.revokeRefreshTokenFamily(ctx, replayStore, requester); err != nil {
 			return c.handleRefreshTokenEndpointStorageError(ctx, err)
 		}
 		if err = replayStore.Commit(ctx); err != nil {
@@ -206,7 +206,6 @@ func (c *RefreshTokenGrantHandler) PopulateTokenEndpointResponse(ctx context.Con
 func (c *RefreshTokenGrantHandler) handleRefreshTokenReuse(
 	ctx context.Context,
 	store transactionalTokenRevocationStorage,
-	signature string,
 	req fosite.Requester,
 ) (err error) {
 	ctx, err = store.BeginTX(ctx)
@@ -217,7 +216,7 @@ func (c *RefreshTokenGrantHandler) handleRefreshTokenReuse(
 		err = c.handleRefreshTokenEndpointStorageError(ctx, err)
 	}()
 
-	if err = c.revokeRefreshTokenFamily(ctx, store, signature, req); err != nil {
+	if err = c.revokeRefreshTokenFamily(ctx, store, req); err != nil {
 		return err
 	}
 
@@ -231,12 +230,13 @@ func (c *RefreshTokenGrantHandler) handleRefreshTokenReuse(
 func (c *RefreshTokenGrantHandler) revokeRefreshTokenFamily(
 	ctx context.Context,
 	store TokenRevocationStorage,
-	signature string,
 	req fosite.Requester,
 ) (err error) {
-	if err = store.DeleteRefreshTokenSession(ctx, signature); err != nil {
-		return err
-	} else if err = store.RevokeRefreshToken(
+	// GetRefreshTokenSession or RotateRefreshToken already established that the
+	// presented refresh token is inactive. Keep that tombstone and revoke the
+	// complete grant family; deleting the inactive row is neither required for
+	// revocation nor safe to make a prerequisite for it.
+	if err = store.RevokeRefreshToken(
 		ctx, req.GetID(),
 	); err != nil && !errors.Is(err, fosite.ErrNotFound) {
 		return err

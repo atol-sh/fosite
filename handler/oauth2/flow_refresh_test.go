@@ -384,11 +384,6 @@ func TestRefreshFlowTransactional_HandleTokenEndpointRequest(t *testing.T) {
 					Times(1)
 				mockRevocationStore.
 					EXPECT().
-					DeleteRefreshTokenSession(propagatedContext, gomock.Any()).
-					Return(nil).
-					Times(1)
-				mockRevocationStore.
-					EXPECT().
 					RevokeRefreshToken(propagatedContext, gomock.Any()).
 					Return(nil).
 					Times(1)

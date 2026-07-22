@@ -22,7 +22,7 @@ type replayTransactionalRevocationStore struct {
 	TokenRevocationStorage
 }
 
-func TestRefreshTokenReplayCleanupOutcome(t *testing.T) {
+func TestRefreshTokenReplayCleanupRevokesFamilyWithoutDeletingInactiveSession(t *testing.T) {
 	ctx := context.Background()
 	request := newRefreshReplayRequest()
 
@@ -39,7 +39,6 @@ func TestRefreshTokenReplayCleanupOutcome(t *testing.T) {
 			GetRefreshTokenSession(ctx, gomock.Any(), gomock.Any()).
 			Return(request, fosite.ErrInactiveToken),
 		transactional.EXPECT().BeginTX(ctx).Return(ctx, nil),
-		revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(nil),
 		revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(nil),
 		revocation.EXPECT().RevokeAccessToken(ctx, request.GetID()).Return(nil),
 		transactional.EXPECT().Commit(ctx).Return(nil),
@@ -98,7 +97,7 @@ func TestRefreshTokenReplayRequiresTransactionalStorage(t *testing.T) {
 	}
 }
 
-func TestRefreshTokenRotationRaceCleanupOutcome(t *testing.T) {
+func TestRefreshTokenRotationRaceCleanupRevokesFamilyWithoutDeletingInactiveSession(t *testing.T) {
 	ctx := context.Background()
 	request := newRefreshReplayRequest()
 	response := fosite.NewAccessResponse()
@@ -116,7 +115,6 @@ func TestRefreshTokenRotationRaceCleanupOutcome(t *testing.T) {
 		revocation.EXPECT().
 			RotateRefreshToken(ctx, request.GetID(), gomock.Any(), gomock.Any()).
 			Return(fosite.ErrInactiveToken),
-		revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(nil),
 		revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(nil),
 		revocation.EXPECT().RevokeAccessToken(ctx, request.GetID()).Return(nil),
 		transactional.EXPECT().Commit(ctx).Return(nil),
@@ -169,22 +167,6 @@ func TestRefreshTokenReplayCleanupFailure(t *testing.T) {
 		)
 	}{
 		{
-			name: "refresh session deletion",
-			expectCalls: func(
-				ctx context.Context,
-				_ fosite.Requester,
-				transactional *internal.MockTransactional,
-				revocation *internal.MockTokenRevocationStorage,
-				failure error,
-			) {
-				gomock.InOrder(
-					transactional.EXPECT().BeginTX(ctx).Return(ctx, nil),
-					revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(failure),
-					transactional.EXPECT().Rollback(ctx).Return(nil),
-				)
-			},
-		},
-		{
 			name: "refresh token revocation",
 			expectCalls: func(
 				ctx context.Context,
@@ -195,7 +177,6 @@ func TestRefreshTokenReplayCleanupFailure(t *testing.T) {
 			) {
 				gomock.InOrder(
 					transactional.EXPECT().BeginTX(ctx).Return(ctx, nil),
-					revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(nil),
 					revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(failure),
 					transactional.EXPECT().Rollback(ctx).Return(nil),
 				)
@@ -212,7 +193,6 @@ func TestRefreshTokenReplayCleanupFailure(t *testing.T) {
 			) {
 				gomock.InOrder(
 					transactional.EXPECT().BeginTX(ctx).Return(ctx, nil),
-					revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(nil),
 					revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(nil),
 					revocation.EXPECT().RevokeAccessToken(ctx, request.GetID()).Return(failure),
 					transactional.EXPECT().Rollback(ctx).Return(nil),
@@ -230,7 +210,6 @@ func TestRefreshTokenReplayCleanupFailure(t *testing.T) {
 			) {
 				gomock.InOrder(
 					transactional.EXPECT().BeginTX(ctx).Return(ctx, nil),
-					revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(nil),
 					revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(nil),
 					revocation.EXPECT().RevokeAccessToken(ctx, request.GetID()).Return(nil),
 					transactional.EXPECT().Commit(ctx).Return(failure),
@@ -286,7 +265,7 @@ func TestRefreshTokenRotationRaceCleanupFailure(t *testing.T) {
 		revocation.EXPECT().
 			RotateRefreshToken(ctx, request.GetID(), gomock.Any(), gomock.Any()).
 			Return(fosite.ErrInactiveToken),
-		revocation.EXPECT().DeleteRefreshTokenSession(ctx, gomock.Any()).Return(failure),
+		revocation.EXPECT().RevokeRefreshToken(ctx, request.GetID()).Return(failure),
 		transactional.EXPECT().Rollback(ctx).Return(nil),
 	)
 

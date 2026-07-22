@@ -95,7 +95,6 @@ func TestReplayCleanupLeavesOuterTransactionOpen(t *testing.T) {
 		storeMock.core.EXPECT().
 			GetRefreshTokenSession(outerCtx, gomock.Any(), gomock.Any()).
 			Return(request, fosite.ErrInactiveToken)
-		storeMock.core.EXPECT().DeleteRefreshTokenSession(gomock.Any(), gomock.Any()).Return(nil)
 		storeMock.revocation.EXPECT().RevokeRefreshToken(gomock.Any(), request.GetID()).Return(nil)
 		storeMock.revocation.EXPECT().RevokeAccessToken(gomock.Any(), request.GetID()).Return(nil)
 
@@ -117,7 +116,6 @@ func TestReplayCleanupLeavesOuterTransactionOpen(t *testing.T) {
 		storeMock.core.EXPECT().
 			RotateRefreshToken(gomock.Any(), request.GetID(), gomock.Any(), gomock.Any()).
 			Return(fosite.ErrInactiveToken)
-		storeMock.core.EXPECT().DeleteRefreshTokenSession(gomock.Any(), gomock.Any()).Return(nil)
 		storeMock.revocation.EXPECT().RevokeRefreshToken(gomock.Any(), request.GetID()).Return(nil)
 		storeMock.revocation.EXPECT().RevokeAccessToken(gomock.Any(), request.GetID()).Return(nil)
 
