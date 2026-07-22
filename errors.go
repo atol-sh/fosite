@@ -27,6 +27,10 @@ var (
 	ErrInvalidatedDeviceCode = stderr.New("Device code has been invalidated")
 	// ErrExistingUserCodeSignature is an error indicating that a row already exists with the provided user_code signature.
 	ErrExistingUserCodeSignature = stderr.New("User code signature already exists in the database")
+	// ErrTokenReplayCleanupComplete is wrapped by ErrInvalidGrant after token replay is detected and all related
+	// token revocations complete successfully. An outer transaction owner must commit those revocations instead of
+	// rolling them back when errors.Is returns true for this sentinel.
+	ErrTokenReplayCleanupComplete = stderr.New("token replay cleanup completed")
 	// ErrSerializationFailure is an error indicating that the transactional capable storage could not guarantee
 	// consistency of Update & Delete operations on the same rows between multiple sessions.
 	ErrSerializationFailure = &RFC6749Error{

@@ -284,7 +284,7 @@ func TestRefreshFlow_HandleTokenEndpointRequest(t *testing.T) {
 					},
 				},
 				{
-					description: "should deny access on token reuse",
+					description: "should fail closed on token reuse without transactional storage",
 					setup: func(config *fosite.Config) {
 						areq.GrantTypes = fosite.Arguments{"refresh_token"}
 						areq.Client = &fosite.DefaultClient{
@@ -311,7 +311,7 @@ func TestRefreshFlow_HandleTokenEndpointRequest(t *testing.T) {
 						err = store.RevokeRefreshToken(context.Background(), req.ID)
 						require.NoError(t, err)
 					},
-					expectErr: fosite.ErrInvalidGrant,
+					expectErr: fosite.ErrServerError,
 				},
 			} {
 				t.Run("case="+c.description, func(t *testing.T) {

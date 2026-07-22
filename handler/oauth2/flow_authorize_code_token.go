@@ -5,6 +5,7 @@ package oauth2
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ory/x/errorsx"
@@ -38,18 +39,11 @@ func (c *AuthorizeExplicitGrantHandler) HandleTokenEndpointRequest(ctx context.C
 		}
 
 		// If an authorize code is used twice, we revoke all refresh and access tokens associated with this request.
-		reqID := authorizeRequest.GetID()
-		hint := "The authorization code has already been used."
-		debug := ""
-		if revErr := c.TokenRevocationStorage.RevokeAccessToken(ctx, reqID); revErr != nil {
-			hint += " Additionally, an error occurred during processing the access token revocation."
-			debug += "Revocation of access_token lead to error " + revErr.Error() + "."
+		replayStore, ok := c.CoreStorage.(AuthorizeCodeReplayStorage)
+		if !ok {
+			return replayCleanupStorageError()
 		}
-		if revErr := c.TokenRevocationStorage.RevokeRefreshToken(ctx, reqID); revErr != nil {
-			hint += " Additionally, an error occurred during processing the refresh token revocation."
-			debug += "Revocation of refresh_token lead to error " + revErr.Error() + "."
-		}
-		return errorsx.WithStack(fosite.ErrInvalidGrant.WithHint(hint).WithDebug(debug))
+		return c.handleAuthorizeCodeReplay(ctx, replayStore, authorizeRequest, err)
 	} else if err != nil && errors.Is(err, fosite.ErrNotFound) {
 		return errorsx.WithStack(fosite.ErrInvalidGrant.WithWrap(err).WithDebug(err.Error()))
 	} else if err != nil {
@@ -101,6 +95,59 @@ func (c *AuthorizeExplicitGrantHandler) HandleTokenEndpointRequest(ctx context.C
 	}
 
 	return nil
+}
+
+func (c *AuthorizeExplicitGrantHandler) handleAuthorizeCodeReplay(
+	ctx context.Context,
+	store AuthorizeCodeReplayStorage,
+	request fosite.Requester,
+	replayErr error,
+) (err error) {
+	ctx, err = store.BeginTX(ctx)
+	if err != nil {
+		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
+	}
+
+	if err = c.revokeAuthorizeCodeFamily(ctx, store, request.GetID()); err != nil {
+		return handleAuthorizeCodeReplayStorageError(ctx, store, err)
+	}
+	if err = store.Commit(ctx); err != nil {
+		return handleAuthorizeCodeReplayStorageError(ctx, store, err)
+	}
+
+	return tokenReplayCleanupError(
+		replayErr,
+		"The authorization code has already been used.",
+		"Authorization code replay was detected. All related tokens have been revoked.",
+	)
+}
+
+func (c *AuthorizeExplicitGrantHandler) revokeAuthorizeCodeFamily(
+	ctx context.Context,
+	store TokenRevocationStorage,
+	requestID string,
+) error {
+	if err := store.RevokeAccessToken(ctx, requestID); !authorizeCodeTokenAlreadyCleaned(err) {
+		return fmt.Errorf("revoke access token family: %w", err)
+	}
+	if err := store.RevokeRefreshToken(ctx, requestID); !authorizeCodeTokenAlreadyCleaned(err) {
+		return fmt.Errorf("revoke refresh token family: %w", err)
+	}
+	return nil
+}
+
+func authorizeCodeTokenAlreadyCleaned(err error) bool {
+	return err == nil || errors.Is(err, fosite.ErrNotFound) || errors.Is(err, fosite.ErrInactiveToken)
+}
+
+func handleAuthorizeCodeReplayStorageError(ctx context.Context, store storage.Transactional, storageErr error) (err error) {
+	err = errorsx.WithStack(fosite.ErrServerError.WithWrap(storageErr).WithDebug(storageErr.Error()))
+	if rollbackErr := store.Rollback(ctx); rollbackErr != nil {
+		err = errorsx.WithStack(fosite.ErrServerError.
+			WithWrap(err).
+			WithDebugf("error: %s; rollback error: %s", err, rollbackErr))
+	}
+	return err
 }
 
 func canIssueRefreshToken(ctx context.Context, c *AuthorizeExplicitGrantHandler, request fosite.Requester) bool {
@@ -156,8 +203,9 @@ func (c *AuthorizeExplicitGrantHandler) PopulateTokenEndpointResponse(ctx contex
 	if err != nil {
 		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
 	}
+	transactionDone := false
 	defer func() {
-		if err != nil {
+		if err != nil && !transactionDone {
 			if rollBackTxnErr := storage.MaybeRollbackTx(ctx, c.CoreStorage); rollBackTxnErr != nil {
 				err = errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebugf("error: %s; rollback error: %s", err, rollBackTxnErr))
 			}
@@ -166,8 +214,25 @@ func (c *AuthorizeExplicitGrantHandler) PopulateTokenEndpointResponse(ctx contex
 
 	if err = c.CoreStorage.InvalidateAuthorizeCodeSession(ctx, signature); errors.Is(err, fosite.ErrInvalidatedAuthorizeCode) {
 		// Another concurrent request already exchanged this code. Per RFC 6749
-		// Section 4.1.2, deny the duplicate exchange.
-		return errorsx.WithStack(fosite.ErrInvalidGrant.WithHint("The authorization code has already been used."))
+		// Section 4.1.2, revoke the related token family and deny the duplicate exchange.
+		replayErr := err
+		replayStore, ok := c.CoreStorage.(AuthorizeCodeReplayStorage)
+		if !ok {
+			err = replayCleanupStorageError()
+			return err
+		}
+		if err = c.revokeAuthorizeCodeFamily(ctx, replayStore, requester.GetID()); err != nil {
+			return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
+		}
+		if err = replayStore.Commit(ctx); err != nil {
+			return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
+		}
+		transactionDone = true
+		return tokenReplayCleanupError(
+			replayErr,
+			"The authorization code has already been used.",
+			"Authorization code replay was detected during exchange. All related tokens have been revoked.",
+		)
 	} else if err != nil {
 		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
 	} else if err = c.CoreStorage.CreateAccessTokenSession(ctx, accessSignature, requester.Sanitize([]string{})); err != nil {
@@ -190,6 +255,7 @@ func (c *AuthorizeExplicitGrantHandler) PopulateTokenEndpointResponse(ctx contex
 	if err = storage.MaybeCommitTx(ctx, c.CoreStorage); err != nil {
 		return errorsx.WithStack(fosite.ErrServerError.WithWrap(err).WithDebug(err.Error()))
 	}
+	transactionDone = true
 
 	return nil
 }

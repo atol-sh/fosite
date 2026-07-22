@@ -415,8 +415,8 @@ func TestAuthorizeCode_HandleTokenEndpointRequest(t *testing.T) {
 						require.NoError(t, store.CreateAuthorizeCodeSession(context.Background(), sig, areq))
 						require.NoError(t, store.InvalidateAuthorizeCodeSession(context.Background(), sig))
 					},
-					description: "should fail because code has been used already",
-					expectErr:   fosite.ErrInvalidGrant,
+					description: "should fail closed because replay cleanup requires transactional storage",
+					expectErr:   fosite.ErrServerError,
 				},
 			} {
 				t.Run(fmt.Sprintf("case=%d/description=%s", i, c.description), func(t *testing.T) {

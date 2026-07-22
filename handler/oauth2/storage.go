@@ -8,12 +8,21 @@ import (
 	"time"
 
 	"github.com/atol-sh/fosite"
+	transactionstorage "github.com/atol-sh/fosite/storage"
 )
 
 type CoreStorage interface {
 	AuthorizeCodeStorage
 	AccessTokenStorage
 	RefreshTokenStorage
+}
+
+// AuthorizeCodeReplayStorage owns the single transaction used to invalidate an authorization code and revoke every
+// token derived from it. Implementations must apply every embedded operation to the transaction carried by context.
+type AuthorizeCodeReplayStorage interface {
+	CoreStorage
+	TokenRevocationStorage
+	transactionstorage.Transactional
 }
 
 // AuthorizeCodeStorage handles storage requests related to authorization codes.

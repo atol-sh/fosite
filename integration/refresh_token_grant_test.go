@@ -191,7 +191,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 			check: func(t *testing.T, original, refreshed *oauth2.Token, or, rr *introspectionResponse) {},
 		},
 		{
-			description: "should deny access if original token was reused",
+			description: "should fail closed on reuse without transactional storage",
 			setup: func(t *testing.T) {
 				oauthClient.Scopes = []string{"offline"}
 			},
@@ -200,13 +200,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 				tokenSource := oauthClient.TokenSource(context.Background(), original)
 				_, err := tokenSource.Token()
 				require.Error(t, err)
-				require.Equal(t, http.StatusBadRequest, err.(*oauth2.RetrieveError).Response.StatusCode)
-
-				refreshed.Expiry = refreshed.Expiry.Add(-time.Hour * 24)
-				tokenSource = oauthClient.TokenSource(context.Background(), refreshed)
-				_, err = tokenSource.Token()
-				require.Error(t, err)
-				require.Equal(t, http.StatusBadRequest, err.(*oauth2.RetrieveError).Response.StatusCode)
+				require.Equal(t, http.StatusInternalServerError, err.(*oauth2.RetrieveError).Response.StatusCode)
 			},
 		},
 	} {
