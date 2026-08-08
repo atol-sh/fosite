@@ -6,6 +6,7 @@ package fosite
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/atol-sh/fosite/i18n"
@@ -66,10 +67,14 @@ func (f *Fosite) NewAccessRequest(ctx context.Context, r *http.Request, session 
 
 	accessRequest.SetRequestedScopes(RemoveEmpty(strings.Split(r.PostForm.Get("scope"), " ")))
 	accessRequest.SetRequestedAudience(GetAudiences(r.PostForm))
-	accessRequest.GrantTypes = RemoveEmpty(strings.Split(r.PostForm.Get("grant_type"), " "))
-	if len(accessRequest.GrantTypes) < 1 {
+	grantTypes, ok := r.PostForm["grant_type"]
+	if !ok || len(grantTypes) == 0 || grantTypes[0] == "" {
 		return accessRequest, errorsx.WithStack(ErrInvalidRequest.WithHint("Request parameter 'grant_type' is missing"))
 	}
+	if len(grantTypes) != 1 || !validGrantType(grantTypes[0]) {
+		return accessRequest, errorsx.WithStack(ErrInvalidRequest.WithHint("Request parameter 'grant_type' must contain exactly one valid grant type"))
+	}
+	accessRequest.GrantTypes = Arguments{grantTypes[0]}
 
 	client, clientErr := f.AuthenticateClient(ctx, r, r.PostForm)
 	if clientErr == nil {
@@ -105,7 +110,74 @@ func (f *Fosite) NewAccessRequest(ctx context.Context, r *http.Request, session 
 	}
 
 	if !found {
-		return nil, errorsx.WithStack(ErrInvalidRequest)
+		return nil, errorsx.WithStack(ErrUnsupportedGrantType)
 	}
 	return accessRequest, nil
+}
+
+func validGrantType(value string) bool {
+	if validGrantName(value) {
+		return true
+	}
+	for index := 0; index < len(value); index++ {
+		if !validURICharacter(value[index]) {
+			return false
+		}
+		if value[index] == '%' {
+			if index+2 >= len(value) ||
+				!validHexCharacter(value[index+1]) ||
+				!validHexCharacter(value[index+2]) {
+				return false
+			}
+			index += 2
+		}
+	}
+	parsed, err := url.Parse(value)
+	return err == nil &&
+		parsed.IsAbs() &&
+		!strings.Contains(value, "#")
+}
+
+func validGrantName(value string) bool {
+	if value == "" {
+		return false
+	}
+	for index := 0; index < len(value); index++ {
+		character := value[index]
+		if (character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') ||
+			(character >= '0' && character <= '9') {
+			continue
+		}
+		switch character {
+		case '-', '.', '_':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func validURICharacter(character byte) bool {
+	if (character >= 'a' && character <= 'z') ||
+		(character >= 'A' && character <= 'Z') ||
+		(character >= '0' && character <= '9') {
+		return true
+	}
+	switch character {
+	case '-', '.', '_', '~',
+		':', '/', '?', '[', ']', '@',
+		'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=',
+		'%':
+		return true
+	default:
+		return false
+	}
+}
+
+func validHexCharacter(character byte) bool {
+	return (character >= 'a' && character <= 'f') ||
+		(character >= 'A' && character <= 'F') ||
+		(character >= '0' && character <= '9')
 }

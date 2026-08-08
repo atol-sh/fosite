@@ -6,14 +6,13 @@ package fosite
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/pkg/errors"
 
 	"github.com/atol-sh/fosite/internal/gen"
 
@@ -43,7 +42,7 @@ func initServerWithKey(t *testing.T) *httptest.Server {
 	return ts
 }
 
-var errRoundTrip = errors.New("roundtrip error")
+var errRoundTrip = fmt.Errorf("roundtrip error: %w", http.ErrNotSupported)
 
 type failingTripper struct{}
 
@@ -128,25 +127,49 @@ func TestDefaultJWKSFetcherStrategy(t *testing.T) {
 	})
 
 	t.Run("JWKSFetcherWithHTTPClient", func(t *testing.T) {
-		rt := retryablehttp.NewClient()
-		rt.RetryMax = 0
-		rt.HTTPClient = &http.Client{Transport: new(failingTripper)}
+		rt := &http.Client{Transport: new(failingTripper)}
 		s := NewDefaultJWKSFetcherStrategy(JWKSFetcherWithHTTPClient(rt))
 		_, err := s.Resolve(ctx, "https://google.com", false)
 		require.ErrorIs(t, err, errRoundTrip)
 	})
 
 	t.Run("JWKSFetcherWithHTTPClientSource", func(t *testing.T) {
-		rt := retryablehttp.NewClient()
-		rt.RetryMax = 0
-		rt.HTTPClient = &http.Client{Transport: new(failingTripper)}
+		rt := &http.Client{Transport: new(failingTripper)}
 		s := NewDefaultJWKSFetcherStrategy(
-			JWKSFetcherWithHTTPClient(retryablehttp.NewClient()),
-			JWKSFetcherWithHTTPClientSource(func(ctx context.Context) *retryablehttp.Client {
+			JWKSFetcherWithHTTPClient(&http.Client{}),
+			JWKSFetcherWithHTTPClientSource(func(ctx context.Context) *http.Client {
 				return rt
 			}))
 		_, err := s.Resolve(ctx, "https://www.google.com", false)
 		require.ErrorIs(t, err, errRoundTrip)
+	})
+
+	t.Run("JWKSFetcherWithDefaultClientRetriesTransientFailures", func(t *testing.T) {
+		attempts := 0
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attempts++
+			if attempts == 1 {
+				w.Header().Set("Retry-After", "0")
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(&jose.JSONWebKeySet{
+				Keys: []jose.JSONWebKey{
+					{
+						KeyID: "retry-success",
+						Use:   "sig",
+						Key:   &gen.MustRSAKey().PublicKey,
+					},
+				},
+			}))
+		}))
+		t.Cleanup(ts.Close)
+
+		s := NewDefaultJWKSFetcherStrategy()
+		keys, err := s.Resolve(ctx, ts.URL, true)
+		require.NoError(t, err)
+		require.Len(t, keys.Key("retry-success"), 1)
+		require.Equal(t, 2, attempts)
 	})
 
 	t.Run("case=error_network", func(t *testing.T) {

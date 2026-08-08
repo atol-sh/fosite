@@ -164,12 +164,12 @@ func runDeviceFlowAccessTokenTest(t *testing.T) {
 		cleanUp     func()
 	}{
 		{
-			description: "should fail with invalid grant type",
+			description: "should fail with unsupported grant type",
 			setup: func() {
 			},
 			params: []goauth.AuthCodeOption{goauth.SetAuthURLParam("grant_type", "invalid_grant_type")},
 			check: func(t *testing.T, token *goauth.Token, err error) {
-				assert.ErrorContains(t, err, "invalid_request")
+				assert.ErrorContains(t, err, "unsupported_grant_type")
 			},
 		},
 		{

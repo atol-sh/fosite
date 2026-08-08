@@ -6,10 +6,10 @@ package fosite
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/ory/x/errorsx"
 
@@ -29,10 +29,10 @@ type JWKSFetcherStrategy interface {
 
 // DefaultJWKSFetcherStrategy is a default implementation of the JWKSFetcherStrategy interface.
 type DefaultJWKSFetcherStrategy struct {
-	client           *retryablehttp.Client
+	client           *http.Client
 	cache            *ristretto.Cache[string, *jose.JSONWebKeySet]
 	ttl              time.Duration
-	clientSourceFunc func(ctx context.Context) *retryablehttp.Client
+	clientSourceFunc func(ctx context.Context) *http.Client
 }
 
 // NewDefaultJWKSFetcherStrategy returns a new instance of the DefaultJWKSFetcherStrategy.
@@ -52,7 +52,7 @@ func NewDefaultJWKSFetcherStrategy(opts ...func(*DefaultJWKSFetcherStrategy)) JW
 
 	s := &DefaultJWKSFetcherStrategy{
 		cache:  dc,
-		client: retryablehttp.NewClient(),
+		client: defaultPooledHTTPClient(),
 		ttl:    time.Hour,
 	}
 
@@ -78,14 +78,14 @@ func JWKSFetcherWithCache(cache *ristretto.Cache[string, *jose.JSONWebKeySet]) f
 }
 
 // JWKSFetcherWithHTTPClient sets the HTTP client to use.
-func JWKSFetcherWithHTTPClient(client *retryablehttp.Client) func(*DefaultJWKSFetcherStrategy) {
+func JWKSFetcherWithHTTPClient(client *http.Client) func(*DefaultJWKSFetcherStrategy) {
 	return func(s *DefaultJWKSFetcherStrategy) {
 		s.client = client
 	}
 }
 
 // JWKSFetcherWithHTTPClientSource sets the HTTP client source function to use.
-func JWKSFetcherWithHTTPClientSource(clientSourceFunc func(ctx context.Context) *retryablehttp.Client) func(*DefaultJWKSFetcherStrategy) {
+func JWKSFetcherWithHTTPClientSource(clientSourceFunc func(ctx context.Context) *http.Client) func(*DefaultJWKSFetcherStrategy) {
 	return func(s *DefaultJWKSFetcherStrategy) {
 		s.clientSourceFunc = clientSourceFunc
 	}
@@ -98,7 +98,7 @@ func (s *DefaultJWKSFetcherStrategy) Resolve(ctx context.Context, location strin
 	cacheKey := defaultJWKSFetcherStrategyCachePrefix + location
 	key, ok := s.cache.Get(cacheKey)
 	if !ok || ignoreCache {
-		req, err := retryablehttp.NewRequest("GET", location, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, location, nil)
 		if err != nil {
 			return nil, errorsx.WithStack(ErrServerError.WithHintf("Unable to create HTTP 'GET' request to fetch  JSON Web Keys from location '%s'.", location).WithWrap(err).WithDebug(err.Error()))
 		}
@@ -108,7 +108,7 @@ func (s *DefaultJWKSFetcherStrategy) Resolve(ctx context.Context, location strin
 			hc = s.clientSourceFunc(ctx)
 		}
 
-		response, err := hc.Do(req.WithContext(ctx))
+		response, err := doRetryableRequest(hc, req)
 		if err != nil {
 			return nil, errorsx.WithStack(ErrServerError.WithHintf("Unable to fetch JSON Web Keys from location '%s'. Check for typos or other network issues.", location).WithWrap(err).WithDebug(err.Error()))
 		}

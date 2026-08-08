@@ -7,10 +7,9 @@ import (
 	"context"
 	"hash"
 	"html/template"
+	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/atol-sh/fosite/i18n"
 	"github.com/atol-sh/fosite/token/jwt"
@@ -236,7 +235,7 @@ type JWKSFetcherStrategyProvider interface {
 // HTTPClientProvider returns the provider for configuring the HTTP client.
 type HTTPClientProvider interface {
 	// GetHTTPClient returns the HTTP client provider.
-	GetHTTPClient(ctx context.Context) *retryablehttp.Client
+	GetHTTPClient(ctx context.Context) *http.Client
 }
 
 // ClientAuthenticationStrategyProvider returns the provider for configuring the client authentication strategy.

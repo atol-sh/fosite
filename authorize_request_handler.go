@@ -66,7 +66,11 @@ func (f *Fosite) authorizeRequestParametersFromOpenIDConnectRequest(ctx context.
 		}
 
 		hc := f.Config.GetHTTPClient(ctx)
-		response, err := hc.Get(location)
+		httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, location, nil)
+		if err != nil {
+			return errorsx.WithStack(ErrInvalidRequestURI.WithHintf("Unable to create an HTTP request for OpenID Connect request parameters at 'request_uri' because: %s.", err.Error()).WithWrap(err).WithDebug(err.Error()))
+		}
+		response, err := doRetryableRequest(hc, httpRequest)
 		if err != nil {
 			return errorsx.WithStack(ErrInvalidRequestURI.WithHintf("Unable to fetch OpenID Connect request parameters from 'request_uri' because: %s.", err.Error()).WithWrap(err).WithDebug(err.Error()))
 		}

@@ -7,10 +7,9 @@ import (
 	"context"
 	"hash"
 	"html/template"
+	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/atol-sh/fosite/token/jwt"
 	"github.com/ory/x/randx"
@@ -198,7 +197,7 @@ type Config struct {
 	ClientSecretsHasher Hasher
 
 	// HTTPClient is the HTTP client to use for requests.
-	HTTPClient *retryablehttp.Client
+	HTTPClient *http.Client
 
 	// AuthorizeEndpointHandlers is a list of handlers that are called before the authorization endpoint is served.
 	AuthorizeEndpointHandlers AuthorizeEndpointHandlers
@@ -288,9 +287,9 @@ func (c *Config) GetRevocationHandlers(ctx context.Context) RevocationHandlers {
 	return c.RevocationHandlers
 }
 
-func (c *Config) GetHTTPClient(ctx context.Context) *retryablehttp.Client {
+func (c *Config) GetHTTPClient(ctx context.Context) *http.Client {
 	if c.HTTPClient == nil {
-		return retryablehttp.NewClient()
+		return defaultPooledHTTPClient()
 	}
 	return c.HTTPClient
 }

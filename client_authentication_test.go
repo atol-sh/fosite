@@ -16,8 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/atol-sh/fosite/internal/gen"
 
 	"github.com/go-jose/go-jose/v3"
@@ -81,7 +79,7 @@ func TestAuthenticateClient(t *testing.T) {
 			JWKSFetcherStrategy: NewDefaultJWKSFetcherStrategy(),
 			ClientSecretsHasher: hasher,
 			TokenURL:            "token-url",
-			HTTPClient:          retryablehttp.NewClient(),
+			HTTPClient:          &http.Client{},
 		},
 	}
 

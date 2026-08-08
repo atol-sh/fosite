@@ -54,7 +54,7 @@ func TestNewAccessRequest(t *testing.T) {
 				"grant_type": {"foo"},
 			},
 			mock:      func() {},
-			expectErr: ErrInvalidRequest,
+			expectErr: ErrUnsupportedGrantType,
 		},
 		{
 			header: http.Header{},
@@ -63,7 +63,7 @@ func TestNewAccessRequest(t *testing.T) {
 				"grant_type": {"foo"},
 				"client_id":  {""},
 			},
-			expectErr: ErrInvalidRequest,
+			expectErr: ErrUnsupportedGrantType,
 			mock:      func() {},
 		},
 		{
@@ -208,6 +208,87 @@ func TestNewAccessRequest(t *testing.T) {
 	}
 }
 
+func TestNewAccessRequestReturnsUnsupportedGrantTypeWhenNoHandlerMatches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	handler := internal.NewMockTokenEndpointHandler(ctrl)
+	handler.EXPECT().CanHandleTokenEndpointRequest(gomock.Any(), gomock.Any()).Return(false)
+
+	form := url.Values{
+		"grant_type": {"urn:example:unsupported"},
+	}
+	provider := &Fosite{
+		Config: &Config{
+			AudienceMatchingStrategy: DefaultAudienceMatchingStrategy,
+			TokenEndpointHandlers:    TokenEndpointHandlers{handler},
+		},
+	}
+	request := &http.Request{
+		Header:   http.Header{},
+		PostForm: form,
+		Form:     form,
+		Method:   http.MethodPost,
+	}
+
+	_, err := provider.NewAccessRequest(NewContext(), request, new(DefaultSession))
+	require.ErrorIs(t, err, ErrUnsupportedGrantType)
+}
+
+func TestNewAccessRequestRejectsMalformedGrantTypeParameters(t *testing.T) {
+	provider := &Fosite{
+		Config: &Config{
+			AudienceMatchingStrategy: DefaultAudienceMatchingStrategy,
+		},
+	}
+	tests := map[string]url.Values{
+		"nonempty form missing grant type": {
+			"scope": {"openid"},
+		},
+		"explicit empty grant type": {
+			"grant_type": {""},
+		},
+		"duplicate grant type": {
+			"grant_type": {"authorization_code", "refresh_token"},
+		},
+		"space separated grant types": {
+			"grant_type": {"authorization_code refresh_token"},
+		},
+		"tab in grant type": {
+			"grant_type": {"foo\tbar"},
+		},
+		"control character in grant type": {
+			"grant_type": {"foo\nbar"},
+		},
+		"invalid URI escape": {
+			"grant_type": {"urn:example:%zz"},
+		},
+		"relative extension identifier": {
+			"grant_type": {"extensions/grant"},
+		},
+		"fragment in extension URI": {
+			"grant_type": {"urn:example:grant#fragment"},
+		},
+	}
+
+	for name, form := range tests {
+		t.Run(name, func(t *testing.T) {
+			request := &http.Request{
+				Header:   http.Header{},
+				PostForm: form,
+				Form:     form,
+				Method:   http.MethodPost,
+			}
+
+			_, err := provider.NewAccessRequest(
+				NewContext(),
+				request,
+				new(DefaultSession),
+			)
+			require.ErrorIs(t, err, ErrInvalidRequest)
+			require.NotErrorIs(t, err, ErrUnsupportedGrantType)
+		})
+	}
+}
+
 func TestNewAccessRequestWithoutClientAuth(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := internal.NewMockStorage(ctrl)
@@ -248,7 +329,7 @@ func TestNewAccessRequestWithoutClientAuth(t *testing.T) {
 				store.EXPECT().GetClient(gomock.Any(), gomock.Any()).Times(0)
 			},
 			method:    "POST",
-			expectErr: ErrInvalidRequest,
+			expectErr: ErrUnsupportedGrantType,
 			handlers:  TokenEndpointHandlers{},
 		},
 		// Handler can skip client auth and ignores missing client.

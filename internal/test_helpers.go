@@ -6,7 +6,6 @@ package internal
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 	"strconv"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	cristaljwt "github.com/cristalhq/jwt/v4"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/html"
 	goauth "golang.org/x/oauth2"
 
@@ -41,30 +39,43 @@ var TestLifespans fosite.ClientLifespanConfig = fosite.ClientLifespanConfig{
 }
 
 func RequireEqualDuration(t *testing.T, expected time.Duration, actual time.Duration, precision time.Duration) {
+	t.Helper()
 	delta := expected - actual
 	if delta < 0 {
 		delta = -delta
 	}
-	require.Less(t, delta, precision, fmt.Sprintf("expected %s; got %s", expected, actual))
+	if delta >= precision {
+		t.Fatalf("expected %s; got %s; delta %s is not less than precision %s", expected, actual, delta, precision)
+	}
 }
 
 func RequireEqualTime(t *testing.T, expected time.Time, actual time.Time, precision time.Duration) {
+	t.Helper()
 	delta := expected.Sub(actual)
 	if delta < 0 {
 		delta = -delta
 	}
-	require.Less(t, delta, precision, fmt.Sprintf(
-		"expected %s; got %s",
-		expected.Format(time.RFC3339Nano),
-		actual.Format(time.RFC3339Nano),
-	))
+	if delta >= precision {
+		t.Fatalf(
+			"expected %s; got %s; delta %s is not less than precision %s",
+			expected.Format(time.RFC3339Nano),
+			actual.Format(time.RFC3339Nano),
+			delta,
+			precision,
+		)
+	}
 }
 
 func ExtractJwtExpClaim(t *testing.T, token string) *time.Time {
+	t.Helper()
 	jwt, err := cristaljwt.ParseNoVerify([]byte(token))
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("parse JWT without verification: %v", err)
+	}
 	claims := &cristaljwt.RegisteredClaims{}
-	require.NoError(t, json.Unmarshal(jwt.Claims(), claims))
+	if err := json.Unmarshal(jwt.Claims(), claims); err != nil {
+		t.Fatalf("decode JWT registered claims: %v", err)
+	}
 	if claims.ExpiresAt == nil {
 		return nil
 	}
