@@ -15,7 +15,7 @@ import (
 	"github.com/atol-sh/fosite/internal"
 	"github.com/atol-sh/fosite/internal/gen"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/gorilla/mux"
 	goauth "golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
